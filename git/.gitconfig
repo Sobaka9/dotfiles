@@ -1,0 +1,6 @@
+[user]
+	email = antonainsteam@outlook.fr
+	name = Antonin Bussat
+[credential]
+	helper = cache --timeout 21600
+	helper = oauth
