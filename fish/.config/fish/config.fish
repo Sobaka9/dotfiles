@@ -141,7 +141,7 @@ fish_add_path $HOME/.cargo/bin
 
 # conda
 set -gx CRYPTOGRAPHY_OPENSSL_NO_LEGACY 1
-fish_add_path /opt/miniconda3/bin
+set -gx TERMINFO /usr/share/terminfo
 
 # nvhpc
 fish_add_path /opt/nvidia/hpc_sdk/Linux_x86_64/25.9/compilers/bin

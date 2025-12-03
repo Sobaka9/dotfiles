@@ -60,7 +60,13 @@
 }
 
 #temperature.critical {
-  background-color: #e42022;
+  background-color: rgba(244, 63, 94, 0.2);
+  color: #ea7908;
+  border-radius: 4px;
+  margin-top: 4px;
+  margin-bottom: 4px;
+  margin-left: 4px;
+  margin-right: 4px;
 }
 
 #memory {
@@ -69,6 +75,6 @@
 }
 
 #custom-powermenu {
-  color: #f43f5e;
+  color: rgb(244, 63, 94);
   margin-right: 4px;
 }
