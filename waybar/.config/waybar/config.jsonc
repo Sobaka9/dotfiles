@@ -98,9 +98,9 @@
     "network": {
         "tooltip": true,
         "rotate": 0,
-        "format-ethernet": "🔗",
+        "format-ethernet": "󰈀",
         "tooltip-format": "<span foreground='#99ffdd'> {bandwidthDownBytes}</span> <span foreground='#ffcc66'> {bandwidthUpBytes}</span>",
-        "format-linked": "🖧  {ifname} (No IP)",
+        "format-linked": "󰈀  {ifname} (No IP)",
         "format-disconnected": "󰖪 ",
         "tooltip-format-disconnected": "Disconnected",
         "format-alt": "<span foreground='#99ffdd'> {bandwidthDownBytes}</span> <span foreground='#ffcc66'> {bandwidthUpBytes}</span>",
@@ -117,7 +117,7 @@
         ]
     },
     "memory": {
-        "format": "󰫗 {}% ",
+        "format": " {}% ",
         "tooltip": "false"
     },
     "cpu": {
@@ -126,6 +126,7 @@
     },
     "pulseaudio": {
         "format": " {volume}% ",
+        "format-muted": "󰝟 ",
         "scroll-step": 1,
         "on-click": "pavucontrol"
     },

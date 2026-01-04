@@ -10,7 +10,7 @@ window {
 
 button {
   color: rgba(255, 255, 255, 0.77);
-  background-color: rgba(255, 255, 255, 0.05);
+  background-color: rgba(255, 255, 255, 0.03);
   outline-style: none;
   border: none;
   border-width: 1px;
@@ -24,13 +24,13 @@ button {
 }
 
 button:focus {
-  background-color: rgba(255, 255, 255, 0.4);
+  background-color: rgba(0, 0, 0, 0.4);
   background-size: 15%;
   border-radius: 12px;
 }
 
 button:hover {
-  background-color: rgba(255, 255, 255, 0.15);
+  background-color: rgba(0, 0, 0, 0.15);
   background-size: 15%;
   border-radius: 12px;
   animation: gradient_f 20s ease-in infinite;
