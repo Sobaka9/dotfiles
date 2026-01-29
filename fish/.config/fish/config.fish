@@ -150,58 +150,22 @@ fish_add_path /opt/nvidia/hpc_sdk/Linux_x86_64/25.9/compilers/bin
 set --export BUN_INSTALL "$HOME/.bun"
 fish_add_path $BUN_INSTALL/bin
 
-# pnpm
-set -gx PNPM_HOME "$HOME/.local/share/pnpm"
-fish_add_path $PNPM_HOME
 
-# fnm setup (homebrew or default)
-if test (uname) = "Darwin"
-  # macOS paths
-  if test -x /opt/homebrew/bin/fnm
-    fish_add_path /opt/homebrew/bin
-    eval (/opt/homebrew/bin/fnm env)
-  else if test -x $HOME/.fnm/fnm
-    fish_add_path $HOME/.fnm
-    eval (fnm env)
-  end
-
-  # zoxide setup (homebrew)
-  if test -x /opt/homebrew/bin/zoxide
-    fish_add_path /opt/homebrew/bin
-    zoxide init fish | source
-  end
-
-  # homebrew shell environment (macOS only)
-  if test -x /opt/homebrew/bin/brew
-    eval (/opt/homebrew/bin/brew shellenv)
-  end
-
-  # LM Studio CLI (macOS)
-  set -gx PATH $PATH /Users/mh/.lmstudio/bin
-else
-  # linux or other platforms
-  if test -x $HOME/.fnm/fnm
-    fish_add_path $HOME/.fnm
-    eval (fnm env)
-  end
-
-  # zoxide
-  if test -x (which zoxide 2>/dev/null)
-    zoxide init fish | source
-  end
-end
-
-
+# "Lazy" conda initialization
 # >>> conda initialize >>>
-# !! Contents within this block are managed by 'conda init' !!
-if test -f /opt/miniconda3/bin/conda
-    eval /opt/miniconda3/bin/conda "shell.fish" "hook" $argv | source
-else
-    if test -f "/opt/miniconda3/etc/fish/conf.d/conda.fish"
-        . "/opt/miniconda3/etc/fish/conf.d/conda.fish"
+function conda
+    functions -e conda
+
+    # Run the initialization logic WITHOUT passing $argv to the hook
+    if test -f /opt/miniconda3/bin/conda
+        eval /opt/miniconda3/bin/conda "shell.fish" "hook" |
+    else if test -f "/opt/miniconda3/etc/fish/conf.d/conda.fish"
+        source "/opt/miniconda3/etc/fish/conf.d/conda.fish" 
     else
-        set -x PATH "/opt/miniconda3/bin" $PATH
+        set -x PATH "/opt/miniconda3/bin" $PATH 
     end
+
+    # 3. Now that the real conda is defined, execute the user's original command
+    command conda $argv
 end
 # <<< conda initialize <<<
-
