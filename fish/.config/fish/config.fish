@@ -43,8 +43,11 @@ function fish_mode_prompt
   echo -n " "
 end
 
-# always use block caret (vimode)
-set -U fish_cursor_default block
+# vi mode carets (fish drives the shape/blink itself, overriding alacritty)
+set -U fish_cursor_default block blink
+set -U fish_cursor_insert line blink
+set -U fish_cursor_visual block blink
+set -U fish_cursor_replace_one underscore blink
 
 # custom prompt
 function fish_prompt
@@ -90,6 +93,8 @@ fish_add_path /opt/bin
 
 # set editor
 set -x EDITOR "vim"
+
+set -x SHELL "/usr/bin/fish"
 
 set QT_QPA_PLATFORM xcb
 

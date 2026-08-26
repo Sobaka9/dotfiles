@@ -1,7 +1,10 @@
 # This file contains fish universal variable definitions.
 # VERSION: 3.0
 SETUVAR __fish_initialized:4300
-SETUVAR fish_cursor_default:block
+SETUVAR fish_cursor_default:block\x1eblink
+SETUVAR fish_cursor_insert:line\x1eblink
+SETUVAR fish_cursor_replace_one:underscore\x1eblink
+SETUVAR fish_cursor_visual:block\x1eblink
 SETUVAR fish_user_paths:/home/anto/go/bin\x1e/home/anto/\x2elocal/share/pnpm\x1e/opt/nvidia/hpc_sdk/Linux_x86_64/25\x2e9/compilers/bin\x1e/home/anto/\x2ecargo/bin\x1e/usr/local/bin
 SETUVAR nvm_default_version:lts/hydrogen
 SETUVAR pure_color_git_dirty:\x1b\x5b36m
