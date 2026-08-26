@@ -2,6 +2,16 @@
 
 local cfg = require("settings")
 
+local ok, colors = pcall(require, "colors")
+if not ok then
+    colors = {
+        active1  = "rgba(7b2cbfee)",
+        active2  = "rgba(5a189aee)",
+        inactive = "rgba(262626ee)",
+        angle    = 45,
+    }
+end
+
 local primaryMonitor = cfg.primaryMonitor
 local secondaryMonitor = cfg.secondaryMonitor
 local scriptsDir = cfg.scriptsDir
@@ -86,8 +96,8 @@ hl.config({
 
         border_size = 3,
         col = {
-            active_border = { colors = { "rgba(7b2cbfee)", "rgba(5a189aee)" }, angle = 45 },
-            inactive_border = "rgba(262626ee)",
+            active_border = { colors = { colors.active1, colors.active2 }, angle = colors.angle },
+            inactive_border = colors.inactive,
         },
 
         layout = "dwindle",

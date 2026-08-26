@@ -12,4 +12,5 @@ alacritty/.config/alacritty/colors.toml
 quickshell/.config/quickshell/bar/Colors.qml
 themes/.config/themes/current
 themes/.config/themes/.wallpaper-state
+themes/.config/themes/.wallpaper-pid
 

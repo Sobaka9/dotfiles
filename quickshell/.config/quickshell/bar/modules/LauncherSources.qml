@@ -39,6 +39,11 @@ Singleton {
             run("printf %s " + JSON.stringify(item.key) + " | wl-copy");
     }
 
+    // Commands run as children of quickshell, so a config reload kills them
+    // partway. apply-theme.sh works around it by doing everything before it
+    // rewrites Colors.qml — the write that triggers the reload. Detaching with
+    // `setsid --fork` was tried instead and is not reliable here: the spawned
+    // process sometimes never ran at all.
     function run(cmd) {
         runner.command = ["sh", "-c", cmd];
         runner.running = true;

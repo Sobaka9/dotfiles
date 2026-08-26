@@ -9,6 +9,8 @@ THEME_DIR="$HOME/.config/themes"
 PAL_DIR="$THEME_DIR/palettes"
 TPL_DIR="$THEME_DIR/templates"
 STATE="$THEME_DIR/.wallpaper-state"
+WP_PID="$THEME_DIR/.wallpaper-pid"
+WP_SCRIPT="$HOME/dotfiles/custom-scripts/start-wallpaperengine.sh"
 
 name="${1:-}"
 if [ -z "$name" ]; then
@@ -28,6 +30,7 @@ fi
 set -a
 # shellcheck disable=SC1090
 source "$pal"
+border_angle_deg="${border_angle%deg}"
 set +a
 
 render() {  # render <template> <destination>
@@ -40,18 +43,9 @@ render() {  # render <template> <destination>
 echo ":: applying theme '$THEME_NAME'"
 
 # --- render colour fragments / configs ---
-render waybar-colors.css   "$HOME/.config/waybar/colors.css"
-render wofi-style.css       "$HOME/.config/wofi/style.css"
 render alacritty-colors.toml "$HOME/.config/alacritty/colors.toml"
-render hypr-colors.conf     "$HOME/.config/hypr/colors.conf"
-render mako.config          "$HOME/.config/mako/config"
-render quickshell-colors.qml "$HOME/.config/quickshell/bar/Colors.qml"
+render hypr-colors.lua       "$HOME/.config/hypr/colors.lua"
 
-# --- GTK / QT (QT follows GTK via QT_QPA_PLATFORMTHEME=gtk3) ---
-# No xsettings daemon runs under Hyprland here, so GTK apps read the theme
-# from settings.ini at startup. This only works because GTK_THEME is NOT
-# pinned in the Hyprland env (an env var would hard-override settings.ini).
-# Running apps don't update live — reopen them to pick up the new theme.
 gtk_ini="$HOME/.config/gtk-3.0/settings.ini"
 if [ -f "$gtk_ini" ]; then
     # --follow-symlinks edits the stow target in place, keeping the symlink.
@@ -67,12 +61,6 @@ if command -v gsettings >/dev/null 2>&1; then
 fi
 
 # --- Papirus folder colour ---
-# Papirus is root-owned (/usr/share/icons), so colouring folders needs sudo.
-# For this to run from the keybind without a password prompt, add a NOPASSWD
-# rule (one-time):
-#   echo "$USER ALL=(root) NOPASSWD: /usr/bin/papirus-folders" \
-#       | sudo tee /etc/sudoers.d/papirus-folders
-# `sudo -n` never prompts, so without the rule this just warns and continues.
 if [ -n "${folder_color:-}" ] && command -v papirus-folders >/dev/null 2>&1; then
     if ! sudo -n papirus-folders -C "$folder_color" --theme "${icon_theme:-Papirus}" >/dev/null 2>&1; then
         echo "warn: could not set folder colour '$folder_color'" \
@@ -81,31 +69,35 @@ if [ -n "${folder_color:-}" ] && command -v papirus-folders >/dev/null 2>&1; the
 fi
 
 # --- live reloads ---
-killall -SIGUSR2 waybar 2>/dev/null || true   # reload waybar style
-# quickshell watches its QML files and reloads itself when Colors.qml changes.
-makoctl reload 2>/dev/null || true            # reload mako config
-# alacritty live-reloads colors.toml automatically.
 if command -v hyprctl >/dev/null 2>&1; then
-    hyprctl reload >/dev/null 2>&1 || true    # re-source hypr colours (won't relaunch apps)
-    # Also set borders directly, so switching works regardless of whether the
-    # active Hyprland config is hyprland.conf or hyprland.lua.
-    hyprctl keyword general:col.active_border \
-        "rgba(${border_active1}) rgba(${border_active2}) ${border_angle}" >/dev/null 2>&1 || true
-    hyprctl keyword general:col.inactive_border \
-        "rgba(${border_inactive})" >/dev/null 2>&1 || true
+    hyprctl eval "hl.config({ general = { col = {
+        active_border = { colors = { \"rgba(${border_active1})\", \"rgba(${border_active2})\" },
+                          angle = ${border_angle_deg} },
+        inactive_border = \"rgba(${border_inactive})\",
+    } } })" >/dev/null 2>&1 || true
 fi
 
 # --- wallpaper engine (only restart if the wallpaper actually changed) ---
 new_wp="${we_primary}|${we_secondary}|${we_nopause:-false}"
 old_wp="$(cat "$STATE" 2>/dev/null || true)"
 if [ "$new_wp" != "$old_wp" ] || ! pgrep -f linux-wallpaperengine >/dev/null 2>&1; then
-    pkill -f 'start-wallpaperengine.sh' 2>/dev/null || true
+    if [ -r "$WP_PID" ]; then
+        old_pid="$(cat "$WP_PID" 2>/dev/null || true)"
+        if [ -n "$old_pid" ] && grep -qs 'start-wallpaperengine' "/proc/$old_pid/cmdline"; then
+            kill "$old_pid" 2>/dev/null || true
+        fi
+    fi
     sleep 0.3
-    setsid "$HOME/dotfiles/custom-scripts/start-wallpaperengine.sh" \
+    setsid "$WP_SCRIPT" \
         "$we_primary" "$we_secondary" "${we_nopause:-false}" >/dev/null 2>&1 &
+    echo $! > "$WP_PID"
     echo "$new_wp" > "$STATE"
 fi
 
 echo "$name" > "$THEME_DIR/current"
+
+# --- quickshell ---
+render quickshell-colors.qml "$HOME/.config/quickshell/bar/Colors.qml"
+
 notify-send -a "theme-switcher" "Theme applied" "$THEME_NAME" 2>/dev/null || true
 echo ":: done"
