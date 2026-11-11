@@ -28,7 +28,7 @@ hl.bind(mainMod .. " + B",          hl.dsp.exec_cmd(browser))
 
 hl.bind(mainMod .. " + X", function()
     hl.dispatch(hl.dsp.exec_cmd(discord))
-    hl.dispatch(hl.dsp.exec_cmd(browser,  { workspace = "2 silent" }))
+    hl.dispatch(hl.dsp.exec_cmd(scriptsDir .. "start-zen.sh"))
     hl.dispatch(hl.dsp.exec_cmd("steam"))
     hl.dispatch(hl.dsp.exec_cmd(terminal .. " --class startup-term", { workspace = "3 silent" }))
 end)

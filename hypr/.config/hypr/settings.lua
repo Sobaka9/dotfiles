@@ -9,9 +9,9 @@ return {
     ---- MY PROGRAMS ----
     terminal = "alacritty",
     fileManager = "nemo",
-    browser = "firefox",
-    codeEditor = "code",
-    discord = "discord",
+    browser = "zen-browser",
+    codeEditor = "com.microsoft.VSCode",
+    discord = "equibop",
 
     ---- MISC ----
     mainMod = "SUPER",

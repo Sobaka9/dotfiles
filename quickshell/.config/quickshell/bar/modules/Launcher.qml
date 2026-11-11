@@ -13,6 +13,12 @@ Scope {
 
     property bool open: false
 
+    // True whenever any part of the launcher is still on screen, including
+    // while it retracts. `open` flips the moment closing starts, which is too
+    // early for anything that needs to stay put until the panel has actually
+    // gone — such as the bar's layer.
+    readonly property bool onScreen: win.offsetScale < 1
+
     // "apps" by default; ">" switches to the command list, and picking a
     // command switches to that command's own list.
     property string mode: "apps"
@@ -36,21 +42,98 @@ Scope {
         return t.trim();
     }
 
-    // Each opening starts fresh.
+    // Each opening starts fresh, but the list is put back to its default
+    // state once the panel has fully retracted (onOnScreenChanged), not here.
+    // Rebuilding it blocks the GUI thread for up to ~100ms; doing that after
+    // the slide had started made the panel stall and then jump ahead.
     onOpenChanged: {
-        offsetAnim.easing.bezierCurve = root.open ? Appearance.bounce.curve
+        if (root.open)
+            search.forceActiveFocus();
+        else
+            root.hoverOpened = false;
+        // Started last, so any work above lands before the first frame
+        // instead of eating into the animation. Opening uses a gentler curve
+        // than the popouts' bounce: it overshoots by ~1% instead of ~9%,
+        // which on a panel this tall was a visible lurch.
+        offsetAnim.easing.bezierCurve = root.open ? Appearance.curve.expressiveDefaultSpatial
                                                   : Appearance.bounce.exit;
         win.offsetScale = root.open ? 0 : 1;
+    }
 
-        if (root.open) {
-            search.forceActiveFocus();
-            // Pin to whichever monitor is focused right now, for as long as
-            // this opening lasts.
-            root.targetScreen = root.focusedScreen();
-            root.mode = "apps";
-            search.text = "";
-            list.currentIndex = 0;
-            list.positionViewAtBeginning();
+    onOnScreenChanged: if (!root.onScreen) root.reset("apps")
+
+    // Point the list at `mode`, empty and scrolled to the top. Assigning
+    // values that are already set triggers nothing, so this costs nothing
+    // when the launcher is already in that state.
+    function reset(mode) {
+        root.mode = mode;
+        search.text = "";
+        list.currentIndex = 0;
+        list.positionViewAtBeginning();
+    }
+
+    // Open on `mode`, on `screen` (default: the focused monitor), pinned there
+    // for as long as this opening lasts; an already-open launcher only
+    // switches lists. The list is prepared before `open` flips, so a rebuild,
+    // when one is needed, finishes before the slide begins.
+    function show(mode, screen) {
+        if (!root.open)
+            root.targetScreen = screen || root.focusedScreen();
+        root.reset(mode);
+        if (mode !== "apps")
+            LauncherSources.load(mode);
+        root.open = true;
+    }
+
+    // ---- Hover to open ----
+    // The middle of the bar, where the window title sits, opens the launcher
+    // on that monitor after a short dwell, so sweeping the pointer across the
+    // bar doesn't grab the keyboard. A launcher opened this way closes once
+    // the pointer has left both that part of the bar and the panel, after the
+    // same grace period the popouts use, unless something has been typed into
+    // it. One opened from the keyboard is left alone.
+    readonly property int panelWidth: 760
+
+    property bool titleHovered: false
+    property var hoverScreen: null
+    property bool hoverOpened: false
+    readonly property bool hovered: titleHovered || clipperHover.hovered || contentHover.hovered
+
+    function setTitleHovered(on, screen) {
+        if (on)
+            root.hoverScreen = screen;
+        root.titleHovered = on;
+    }
+
+    onHoveredChanged: {
+        if (root.hovered) {
+            leaveTimer.stop();
+            if (!root.open)
+                dwellTimer.restart();
+        } else {
+            dwellTimer.stop();
+            if (root.hoverOpened)
+                leaveTimer.restart();
+        }
+    }
+
+    Timer {
+        id: dwellTimer
+        interval: 150
+        onTriggered: {
+            if (!root.titleHovered || root.open)
+                return;
+            root.show("apps", root.hoverScreen);
+            root.hoverOpened = true;
+        }
+    }
+
+    Timer {
+        id: leaveTimer
+        interval: 250
+        onTriggered: {
+            if (root.open && root.hoverOpened && !root.hovered && search.text.length === 0)
+                root.open = false;
         }
     }
 
@@ -59,7 +142,12 @@ Scope {
         appid: "quickshell"
         name: "launcher"
         description: "Toggle the application launcher"
-        onPressed: root.open = !root.open
+        onPressed: {
+            if (root.open)
+                root.open = false;
+            else
+                root.show("apps");
+        }
     }
 
     function openIn(mode) {
@@ -67,12 +155,7 @@ Scope {
             root.open = false;
             return;
         }
-        root.open = true;
-        root.mode = mode;
-        search.text = "";
-        list.currentIndex = 0;
-        list.positionViewAtBeginning();
-        LauncherSources.load(mode);
+        root.show(mode);
     }
 
     GlobalShortcut {
@@ -185,6 +268,11 @@ Scope {
         anchors.top: true
         exclusiveZone: 0
         color: "transparent"
+        // Overlay rather than the default Top: a fullscreen window renders
+        // above Top layers, which is why the launcher was invisible on a
+        // workspace with something fullscreened. Overlay sits above it, so
+        // nothing has to be unfullscreened or minimised to get at the launcher.
+        WlrLayershell.layer: WlrLayer.Overlay
         WlrLayershell.keyboardFocus: root.open ? WlrKeyboardFocus.Exclusive
                                                : WlrKeyboardFocus.None
 
@@ -212,8 +300,13 @@ Scope {
         }
 
         readonly property real surfaceHeight: chrome(shownRows)
+        // How much of the panel is showing below the bar.
+        // Whole pixels: the panel now moves, and at fractional positions its text
+        // (snapped to the pixel grid) and its edges (not snapped) stepped
+        // unevenly against each other, which read as jitter.
+        readonly property real shownHeight: Math.round(Math.max(0, surfaceHeight * (1 - offsetScale)))
 
-        implicitWidth: 760 + corner * 2
+        implicitWidth: root.panelWidth + corner * 2
         implicitHeight: chrome(visibleRows) * (1 + Appearance.bounce.overshoot) + Appearance.shadow.margin
 
         visible: true
@@ -258,31 +351,38 @@ Scope {
                 visible: height > 0
                 clip: true
 
+                HoverHandler { id: clipperHover }
+
                 Rectangle {
                     id: surface
 
                     x: win.corner
                     width: parent.width - win.corner * 2
-                    height: Math.max(0, win.surfaceHeight * (1 - win.offsetScale))
+                    height: win.shownHeight
                     y: 0
 
                     color: Colors.m3surface
                     topLeftRadius: 0
                     topRightRadius: 0
-                    bottomLeftRadius: Appearance.rounding.extraLarge
-                    bottomRightRadius: Appearance.rounding.extraLarge
+                    // The fillets and the panel's bottom corners share its height, each
+                    // getting at most half, so they always meet on a straight stretch of
+                    // side; a full-size fillet beside a short panel left a sliver of
+                    // background between them in the last frames of every close.
+                    readonly property real fillet: Math.max(0, Math.min(Appearance.rounding.large, height / 2))
+                    bottomLeftRadius: Math.max(0, Math.min(Appearance.rounding.extraLarge, height / 2))
+                    bottomRightRadius: Math.max(0, Math.min(Appearance.rounding.extraLarge, height / 2))
 
                     InvertedCorner {
                         anchors.right: parent.left
                         anchors.top: parent.top
-                        size: Appearance.rounding.large
+                        size: surface.fillet
                         color: parent.color
                     }
 
                     InvertedCorner {
                         anchors.left: parent.right
                         anchors.top: parent.top
-                        size: Appearance.rounding.large
+                        size: surface.fillet
                         color: parent.color
                         mirrored: true
                     }
@@ -294,9 +394,11 @@ Scope {
             x: win.corner + Appearance.padding.large
             y: 0
             width: surface.width - Appearance.padding.large * 2
-            height: surface.height
+            height: win.shownHeight
             visible: clipper.height > 0
             clip: true
+
+            HoverHandler { id: contentHover }
 
             Item {
                 anchors.left: parent.left
@@ -316,7 +418,15 @@ Scope {
                     clip: true
                     model: ScriptModel {
                         values: root.entries
-                        onValuesChanged: list.currentIndex = 0
+                        onValuesChanged: {
+                            // Resetting currentIndex is not enough: if it is
+                            // already 0 no change signal fires, so nothing
+                            // repositions the view and it stays wherever the
+                            // previous list left it — which after switching
+                            // modes looks like the list starting partway down.
+                            list.currentIndex = 0;
+                            list.positionViewAtBeginning();
+                        }
                     }
 
                     currentIndex: 0
@@ -383,8 +493,13 @@ Scope {
                                 ? event.pixelDelta.y * scrollRows
                                 : (event.angleDelta.y / 120) * win.rowHeight * scrollRows;
 
-                            const maxY = Math.max(0, list.contentHeight - list.height);
-                            list.contentY = Math.max(0, Math.min(maxY, list.contentY - dy));
+                            // The top of the content is originY, not 0 — it goes
+                            // negative once items have been inserted ahead of the
+                            // visible ones. Clamping to 0 leaves the first rows
+                            // unreachable above the viewport.
+                            const minY = list.originY;
+                            const maxY = minY + Math.max(0, list.contentHeight - list.height);
+                            list.contentY = Math.max(minY, Math.min(maxY, list.contentY - dy));
                             event.accepted = true;
                         }
                     }
@@ -430,6 +545,10 @@ Scope {
                             IconImage {
                                 anchors.verticalCenter: parent.verticalCenter
                                 implicitSize: 38
+                                // Decode off the GUI thread; synchronous icon
+                                // loads were part of the stall when rows were
+                                // created.
+                                asynchronous: true
                                 visible: modelData.kind !== "emoji"
                                          && (modelData.preview || "") === ""
                                          && (modelData.icon || "") !== ""

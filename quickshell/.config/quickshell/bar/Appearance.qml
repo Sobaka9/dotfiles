@@ -57,11 +57,13 @@ Singleton {
     }
 
     // Drop shadow under the bar and its panels.
+    // `margin` is the room windows leave around their content for it; keep it
+    // at least as large as the blur's reach or the shadow ends in a hard edge.
     readonly property QtObject shadow: QtObject {
-        readonly property int margin: 14
+        readonly property int margin: 24
         readonly property real blur: 0.75
-        readonly property real opacity: 0.45
-        readonly property int yOffset: 2
+        readonly property real opacity: 0.75
+        readonly property int yOffset: 3
     }
 
     readonly property QtObject anim: QtObject {

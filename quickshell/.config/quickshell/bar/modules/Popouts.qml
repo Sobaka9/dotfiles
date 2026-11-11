@@ -3,6 +3,7 @@
 import QtQuick
 import QtQuick.Effects
 import Quickshell
+import Quickshell.Wayland
 import "root:/"
 import "popouts"
 
@@ -17,6 +18,8 @@ PanelWindow {
     exclusiveZone: 0
     color: "transparent"
     focusable: false
+    // Same layer as the bar (see shell.qml), which is drawn beneath it.
+    WlrLayershell.layer: WlrLayer.Overlay
 
     visible: true
 
@@ -67,6 +70,19 @@ PanelWindow {
     readonly property real surfaceX: Math.round(Math.max(0, Math.min(maxXNow, slideX)))
     readonly property real surfaceWidth: Math.round(panelWidth)
 
+    // How much of the panel is currently revealed.
+    // Whole pixels: the panel now moves, and at fractional positions its text
+    // (snapped to the pixel grid) and its edges (not snapped) stepped
+    // unevenly against each other, which read as jitter.
+    readonly property real surfaceHeight: Math.round(Math.max(0, panelHeight * (1 - offsetScale)))
+
+    // The fillets and the panel's bottom corners share its height, each
+    // getting at most half, so they always meet on a straight stretch of
+    // side; a full-size fillet beside a short panel left a sliver of
+    // background between them in the last frames of every close.
+    readonly property real revealCorner: Math.max(0, Math.min(corner, surfaceHeight / 2))
+    readonly property real bottomRadius: Math.max(0, Math.min(Appearance.rounding.large, surfaceHeight / 2))
+
     readonly property bool flushLeft: surfaceX <= 0.5
     readonly property bool flushRight: surfaceX >= maxXNow - 0.5
 
@@ -115,7 +131,7 @@ PanelWindow {
             width: root.surfaceWidth + root.corner * 2
             anchors.top: parent.top
 
-            height: Math.max(0, (root.panelHeight + root.corner) * (1 - root.offsetScale))
+            height: root.surfaceHeight
             visible: height > 0
             clip: true
 
@@ -133,20 +149,20 @@ PanelWindow {
             x: root.corner
             width: root.surfaceWidth
 
-            height: Math.max(0, root.panelHeight * (1 - root.offsetScale))
+            height: root.surfaceHeight
             y: 0
 
             color: Colors.m3surface
             topLeftRadius: 0
             topRightRadius: 0
-            bottomLeftRadius: root.flushLeft ? 0 : Appearance.rounding.large
-            bottomRightRadius: root.flushRight ? 0 : Appearance.rounding.large
+            bottomLeftRadius: root.flushLeft ? 0 : root.bottomRadius
+            bottomRightRadius: root.flushRight ? 0 : root.bottomRadius
 
             InvertedCorner {
                 anchors.right: parent.left
                 anchors.top: parent.top
                 visible: !root.flushLeft
-                size: root.corner
+                size: root.revealCorner
                 color: surface.color
             }
 
@@ -154,26 +170,9 @@ PanelWindow {
                 anchors.left: parent.right
                 anchors.top: parent.top
                 visible: !root.flushRight
-                size: root.corner
+                size: root.revealCorner
                 color: surface.color
                 mirrored: true
-            }
-
-            InvertedCorner {
-                anchors.left: parent.left
-                anchors.top: parent.bottom
-                visible: root.flushLeft
-                size: root.corner
-                color: surface.color
-                mirrored: true
-            }
-
-            InvertedCorner {
-                anchors.right: parent.right
-                anchors.top: parent.bottom
-                visible: root.flushRight
-                size: root.corner
-                color: surface.color
             }
         }
 

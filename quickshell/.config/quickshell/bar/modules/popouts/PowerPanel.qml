@@ -1,5 +1,6 @@
 // Shutdown and reboot.
 import QtQuick
+import Quickshell
 import Quickshell.Io
 import "root:/"
 
@@ -14,16 +15,15 @@ Column {
     }
 
     function run(action) {
-        runner.command = ["sh", "-c",
-            "if command -v hyprshutdown >/dev/null; then hyprshutdown -p '" + action + "'; else " + action + "; fi"];
+        runner.command = [Quickshell.env("HOME") + "/dotfiles/custom-scripts/power.sh", action];
         runner.running = true;
         Panels.close();
     }
 
     Repeater {
         model: [
-            { label: "Shutdown", icon: Icons.power,  action: "systemctl poweroff", accent: Colors.red },
-            { label: "Reboot",   icon: Icons.reboot, action: "systemctl reboot",   accent: Colors.yellow }
+            { label: "Shutdown", icon: Icons.power,  action: "poweroff", accent: Colors.red },
+            { label: "Reboot",   icon: Icons.reboot, action: "reboot",   accent: Colors.yellow }
         ]
 
         delegate: Rectangle {

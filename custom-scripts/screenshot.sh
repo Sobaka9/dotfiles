@@ -77,8 +77,10 @@ fi
 saved="$screenshots_dir/SS-$(date +%Y-%m-%d_%H-%M-%S).png"
 
 # Enter copies to the clipboard, saves to disk and quits.
-# Escape throws the screenshot away.
+# Escape throws the screenshot away. satty's own notifications are off: they
+# carry no picture, so the script sends one with the saved file instead.
 satty --filename "$raw" \
+    --disable-notifications \
     --output-filename "$saved" \
     --copy-command wl-copy \
     --actions-on-enter save-to-clipboard,save-to-file \
@@ -97,4 +99,6 @@ fi
 if [[ -f $saved ]]; then
     wl-copy --type image/png <"$saved" || fail "could not copy $saved to the clipboard"
     note "saved $saved"
+    notify-send -a screenshot -h "string:image-path:$saved" \
+        "Screenshot saved" "Copied to clipboard · ${saved##*/}" 2>/dev/null
 fi

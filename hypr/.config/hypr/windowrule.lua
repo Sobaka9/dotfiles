@@ -48,6 +48,17 @@ hl.layer_rule({
     no_anim = true,
 })
 
+-- Stack the quickshell bar beneath the panels that hang off it (popouts,
+-- launcher, notifications), so its drop shadow doesn't fall across their
+-- tops. Within a layer a higher `order` is drawn first, and this still holds
+-- while quickshell lifts the bar to the overlay layer for the launcher.
+hl.layer_rule({
+    name    = "quickshell-bar",
+    match   = { namespace = "quickshell-bar" },
+    no_anim = true,
+    order   = 1,
+})
+
 -- Window rules. Order matters: rules are evaluated top to bottom.
 -- Rules for screen sharing
 hl.window_rule({
