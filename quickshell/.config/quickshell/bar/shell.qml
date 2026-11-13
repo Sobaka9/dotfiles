@@ -48,11 +48,17 @@ ShellRoot {
             // showed up late or not at all.) The panels hanging off it are on
             // the overlay layer too, and a Hyprland layer rule draws the bar
             // beneath them (hypr/windowrule.lua).
+            // True only for a window that is really fullscreen. Hyprland's
+            // workspace `hasFullscreen` is also set by a maximized window (its
+            // fullscreen mode 1), which hid the bar over a maximized browser;
+            // the Wayland fullscreen state is only set for real fullscreen.
             readonly property bool fullscreenBelow:
-                Hyprland.monitorFor(perScreen.modelData)?.activeWorkspace?.hasFullscreen ?? false
-            readonly property bool launcherHere: (launcher.open || launcher.onScreen)
-                                                 && launcher.targetScreen === perScreen.modelData
-            readonly property bool shown: !fullscreenBelow || launcherHere
+                (Hyprland.monitorFor(perScreen.modelData)?.activeWorkspace?.toplevels.values ?? [])
+                    .some(t => t.wayland?.fullscreen ?? false)
+            // A popout up on this monitor; over a fullscreen window that can
+            // only be the launcher, as the hidden bar can't be hovered.
+            readonly property bool popoutHere: popouts.active || popouts.onScreen
+            readonly property bool shown: !fullscreenBelow || popoutHere
             WlrLayershell.layer: WlrLayer.Overlay
             Binding { target: bar.contentItem; property: "visible"; value: bar.shown }
 
@@ -173,7 +179,11 @@ ShellRoot {
         }
 
             // One popout container per monitor, shared by every widget.
-            Popouts { targetScreen: perScreen.modelData }
+            Popouts {
+                id: popouts
+                targetScreen: perScreen.modelData
+                launcherState: launcher
+            }
         }
     }
 }

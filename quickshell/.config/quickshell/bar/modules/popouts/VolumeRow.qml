@@ -163,6 +163,21 @@ Column {
             Behavior on color { ColorAnimation { duration: Appearance.anim.expressiveFastEffects } }
         }
 
+        // Scrolling over the slider nudges it, like the bar's volume widget.
+        // Only over the slider: elsewhere the wheel scrolls the app list
+        // when it is longer than the panel shows.
+        Item {
+            anchors.fill: parent
+            anchors.topMargin: -10
+            anchors.bottomMargin: -10
+            WheelHandler {
+                acceptedDevices: PointerDevice.Mouse | PointerDevice.TouchPad
+                onWheel: function (event) {
+                    root.setVolume(root.volume + (event.angleDelta.y > 0 ? 0.02 : -0.02));
+                }
+            }
+        }
+
         MouseArea {
             id: sliderMouse
             anchors.fill: parent
@@ -174,11 +189,4 @@ Column {
         }
     }
 
-    // Scrolling over the row nudges it, like the bar's volume widget.
-    WheelHandler {
-        acceptedDevices: PointerDevice.Mouse | PointerDevice.TouchPad
-        onWheel: function (event) {
-            root.setVolume(root.volume + (event.angleDelta.y > 0 ? 0.02 : -0.02));
-        }
-    }
 }

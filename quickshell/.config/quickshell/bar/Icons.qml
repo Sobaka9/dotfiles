@@ -23,4 +23,7 @@ Singleton {
     readonly property string down:     String.fromCodePoint(0xF0045)
     readonly property string up:       String.fromCodePoint(0xF005D)
     readonly property string reboot:   String.fromCodePoint(0xF0709)
+    readonly property string prev:     String.fromCodePoint(0xF0141)
+    readonly property string next:     String.fromCodePoint(0xF0142)
+    readonly property string today:    String.fromCodePoint(0xF00F6)
 }

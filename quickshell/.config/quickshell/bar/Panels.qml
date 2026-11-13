@@ -18,7 +18,15 @@ Singleton {
     property real pendingCentre: 0
     property var pendingScreen: null
 
+    // A pinned panel ignores hover: it doesn't close when the pointer leaves,
+    // and the pointer passing over another widget doesn't swap it for that
+    // widget's panel. Used by the launcher when opened from the keyboard or
+    // typed into. Closing, or clicking a widget, still works.
+    property bool pinned: false
+
     function open(name, centre, screen) {
+        if (root.pinned && root.hasCurrent && root.currentName !== name)
+            return;
         closeTimer.stop();
 
         if (!root.hasCurrent || root.currentName === name) {
@@ -75,6 +83,7 @@ Singleton {
         closeTimer.stop();
         root.hovered = ({});
         root.hasCurrent = false;
+        root.pinned = false;
     }
 
     Timer {
@@ -88,6 +97,8 @@ Singleton {
         id: closeTimer
         interval: 250
         onTriggered: {
+            if (root.pinned)
+                return;
             root.hasCurrent = false;
             root.pendingName = "";
         }

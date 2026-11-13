@@ -11,15 +11,22 @@ PanelWindow {
     id: root
 
     required property var targetScreen
+    // The launcher's state (Launcher.qml). Not named `launcher`: in shell.qml
+    // `launcher: launcher` would then read this property, not the launcher.
+    required property var launcherState
 
     readonly property bool active: Panels.hasCurrent && Panels.currentScreen === root.targetScreen
+    // Any part of a panel is still showing, including while it retracts.
+    readonly property bool onScreen: offsetScale < 1
     screen: targetScreen
     anchors { top: true; left: true; right: true }
     exclusiveZone: 0
     color: "transparent"
-    focusable: false
     // Same layer as the bar (see shell.qml), which is drawn beneath it.
     WlrLayershell.layer: WlrLayer.Overlay
+    // The keyboard only while the launcher is the panel showing here.
+    WlrLayershell.keyboardFocus: root.active && Panels.currentName === "launcher"
+                                 ? WlrKeyboardFocus.Exclusive : WlrKeyboardFocus.None
 
     visible: true
 
@@ -86,12 +93,16 @@ PanelWindow {
     readonly property bool flushLeft: surfaceX <= 0.5
     readonly property bool flushRight: surfaceX >= maxXNow - 0.5
 
-    implicitHeight: 520
+    // Tall enough for the launcher at its full eight rows.
+    implicitHeight: 640
 
     property real offsetScale: 1
     onActiveChanged: {
-        offsetAnim.easing.bezierCurve = root.active ? Appearance.bounce.curve
-                                                    : Appearance.bounce.exit;
+        // The launcher opens on a gentler curve than the bounce: on a panel
+        // that tall the bounce's ~9% overshoot was a visible lurch.
+        offsetAnim.easing.bezierCurve = !root.active ? Appearance.bounce.exit
+            : Panels.currentName === "launcher" ? Appearance.curve.expressiveDefaultSpatial
+            : Appearance.bounce.curve;
         root.offsetScale = root.active ? 0 : 1;
     }
     Behavior on offsetScale {
@@ -189,6 +200,7 @@ PanelWindow {
             Panel { name: "system"; sourceComponent: SystemPanel {} }
             Panel { name: "power";  sourceComponent: PowerPanel {} }
             Panel { name: "tray";   sourceComponent: TrayPanel {} }
+            Panel { name: "launcher"; sourceComponent: LauncherPanel { launcher: root.launcherState } }
         }
         }
     }

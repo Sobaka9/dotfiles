@@ -49,7 +49,13 @@ Scope {
         // corner: it ignores the bar's reserved space, sits `inset` in from
         // the edges (room for its shadow), drops the fillet and rounds every
         // outer corner.
-        readonly property bool floating: Hyprland.focusedMonitor?.activeWorkspace?.hasFullscreen ?? false
+        // True only for a window that is really fullscreen. Hyprland's
+        // workspace `hasFullscreen` is also set by a maximized window (its
+        // fullscreen mode 1), which hid the bar over a maximized browser;
+        // the Wayland fullscreen state is only set for real fullscreen.
+        readonly property bool floating:
+            (Hyprland.focusedMonitor?.activeWorkspace?.toplevels.values ?? [])
+                .some(t => t.wayland?.fullscreen ?? false)
         readonly property int inset: floating ? corner : 0
         // The window always sits at the very top of the screen, at a fixed
         // width, ignoring the bar's reserved space; the stack is placed inside
